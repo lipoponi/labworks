@@ -61,6 +61,7 @@ int main() {
     }
 
     vector<bool> seen = getSeen(rules);
+    seen[S - 'A'] = true;
 
     int lastSize = -1;
     set<char> generating;
