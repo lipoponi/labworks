@@ -63,7 +63,6 @@ private:
 
     inline static void resolve(Node *node) {
         if (node == nullptr || !node->reversed) return;
-        if (node->parent != nullptr) node->link = nullptr;
 
         reverse(node->left);
         reverse(node->right);
