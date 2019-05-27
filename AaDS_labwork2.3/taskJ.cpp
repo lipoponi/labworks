@@ -1,77 +1,98 @@
 #include <iostream>
 #include <vector>
 #include <unordered_set>
+#include <unordered_map>
 
 using namespace std;
 
-vector<int> sz;
-vector<unordered_set<int>> tree;
-vector<int> decomposition;
 
-int findCentroid(int v) {
+struct Node {
+    int count = 0, supCentroid = -1;
+    unordered_set<int> children, subCentroids;
+    unordered_map<int, int> supCentroidsDistance;
+};
+
+vector<Node> nodes;
+
+
+void buildDfs(int v = 0) {
+    nodes[v].count = 1;
+    for (int next : nodes[v].children) {
+        if (nodes[next].count != 0) continue;
+        buildDfs(next);
+        nodes[v].count += nodes[next].count;
+    }
+}
+
+int decomposition(int v, int prev) {
     int heavy = -1;
-    for (int kid : tree[v]) {
-        if (sz[v] < sz[kid] * 2 && (heavy == -1 || sz[heavy] < sz[kid])) {
+    for (int kid : nodes[v].children) {
+        if (nodes[v].count < nodes[kid].count * 2 && (heavy == -1 || nodes[heavy].count < nodes[kid].count)) {
             heavy = kid;
         }
     }
 
-    if (heavy == -1) {
-        for (int kid : tree[v]) {
-            tree[kid].erase(v);
+    for (auto e : nodes[prev].supCentroidsDistance) {
+        if (nodes[v].supCentroidsDistance.find(e.first) == nodes[v].supCentroidsDistance.end()) {
+            nodes[v].supCentroidsDistance[e.first] = e.second + 1;
+        } else {
+            nodes[v].supCentroidsDistance[e.first] = min(nodes[v].supCentroidsDistance[e.first], e.second + 1);
+        }
+    }
 
-            int kidCentroid = findCentroid(kid);
-            decomposition[kidCentroid] = v;
+    if (heavy == -1) {
+        nodes[v].supCentroidsDistance[v] = 0;
+
+        for (int kid : nodes[v].children) {
+            nodes[kid].children.erase(v);
+
+            int kidCentroid = decomposition(kid, v);
+            nodes[kidCentroid].supCentroid = v;
+            nodes[v].subCentroids.insert(kidCentroid);
         }
 
         return v;
     } else {
-        if (sz[heavy] < sz[v]) {
-            sz[v] -= sz[heavy];
-            sz[heavy] += sz[v];
-        }
+        nodes[v].count -= nodes[heavy].count;
+        nodes[heavy].count += nodes[v].count;
 
-        return findCentroid(heavy);
+        return decomposition(heavy, v);
     }
 }
 
-void dfs(int v) {
-    sz[v] = 1;
-    for (int next : tree[v]) {
-        if (sz[next] != 0) continue;
-        dfs(next);
-        sz[v] += sz[next];
-    }
+inline int decomposition() {
+    return decomposition(0, 0);
 }
+
 
 int main() {
 #ifndef DEBUG
     ios_base::sync_with_stdio(false);
-	cin.tie(nullptr);
-	cout.tie(nullptr);
+    cin.tie(nullptr);
+    cout.tie(nullptr);
 #endif
 
     int n;
-    scanf("%d", &n);
+    cin >> n;
 
-    tree.resize(n);
-    sz.resize(n, 0);
-    decomposition.resize(n, -1);
+    nodes.resize(n);
 
     for (int i = 1; i < n; i++) {
         int v, u;
-        scanf("%d %d", &v, &u);
+        cin >> v >> u;
         v--, u--;
 
-        tree[v].insert(u);
-        tree[u].insert(v);
+        nodes[v].children.insert(u);
+        nodes[u].children.insert(v);
     }
 
-    dfs(0);
-    findCentroid(0);
 
-    for (int e : decomposition) {
-        printf("%d ", e + 1);
+    buildDfs();
+    decomposition();
+
+    for (Node &v : nodes) {
+        cout << v.supCentroid + 1 << " ";
     }
+    
     return 0;
 }
